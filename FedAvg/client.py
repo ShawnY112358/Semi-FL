@@ -1,5 +1,5 @@
 import wideresnet
-from model import load_extractor, load_classifier
+from model import load_model
 import torch
 import numpy as np
 from data_loader import load_dataset
@@ -26,8 +26,7 @@ class avg_Client():
         self.num_data = len(self.labeled_data)
         self.server = server
 
-        self.extractor = load_extractor().to(conf.device)
-        self.classifier = load_classifier().to(conf.device)
+        self.model = load_model().to(conf.device)
         self.num_l_epochs = conf.l_epoch
         self.batch_size = conf.batchsize
         self.lr = conf.learning_rate
@@ -36,10 +35,8 @@ class avg_Client():
 
     def train(self):
         print("FedAvg:")
-        self.extractor.train()
-        self.classifier.train()
-        optimizer_e = optim.SGD(self.extractor.parameters(), lr=self.lr)
-        optimizer_c = optim.SGD(self.classifier.parameters(), lr=self.lr)
+        self.model.train()
+        optimizer= optim.SGD(self.model.parameters(), lr=self.lr)
         criterion = nn.CrossEntropyLoss().to(conf.device)
         # criterion = nn.CrossEntropyLoss(weight=self.server.sample_weight).to(conf.device)   # sample re-weighting
 
@@ -55,15 +52,13 @@ class avg_Client():
                     l_iter = iter(trainloader)
                     l_data = l_iter.__next__()
                 x, y = l_data
-                optimizer_e.zero_grad()
-                optimizer_c.zero_grad()
+                optimizer.zero_grad()
                 x, y = x.to(conf.device), y.to(conf.device)
                 # output = self.classifier(self.extractor(x))
-                output = self.classifier(self.extractor(x))
+                output = self.model(x)
                 loss = criterion(output, y)
                 loss.backward()
-                optimizer_e.step()
-                optimizer_c.step()
+                optimizer.step()
 
                 avg_loss += loss.cpu().item()
             if (l_epoch + 1) % 10 == 0:
@@ -76,16 +71,12 @@ class avg_Client():
 
     def down_model(self):
 
-        for key in self.extractor.state_dict().keys():
-            self.extractor.state_dict()[key].data.copy_(self.server.extractor.state_dict()[key])
-
-        for key in self.classifier.state_dict().keys():
-            self.classifier.state_dict()[key].data.copy_(self.server.classifier.state_dict()[key])
+        for key in self.model.state_dict().keys():
+            self.model.state_dict()[key].data.copy_(self.server.extractor.state_dict()[key])
 
 
     def test(self):
-        self.extractor.eval()
-        self.classifier.eval()
+        self.model.eval()
 
         test_loader = torch.utils.data.DataLoader(self.test_data, batch_size=self.batch_size, shuffle=True)
         total = 0
@@ -95,7 +86,7 @@ class avg_Client():
                 inputs, labels = data
                 inputs, labels = inputs.to(conf.device), labels.to(conf.device)
                 # output = self.classifier(self.extractor(inputs))
-                output = self.classifier(self.extractor(inputs))
+                output = self.model(inputs)
                 _, predicted = torch.max(output.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -104,9 +95,7 @@ class avg_Client():
         with open('./FedAvg/log/test_acc_%d.txt' % self.index, 'w') as fp:
             json.dump(self.test_acc, fp)
 
-        self.extractor.train()
-        self.classifier.train()
+        self.model.train()
 
     def save_model(self):
-        torch.save(self.extractor, './FedAvg/model/extractor_%d.pt' % self.index)
-        torch.save(self.classifier, './FedAvg/model/classifier_%d.pt' % self.index)
+        torch.save(self.model, './FedAvg/model/model_%d.pt')

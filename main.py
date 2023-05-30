@@ -2,7 +2,7 @@ import data_loader
 from data_loader import pathological, load_from_file, save_data
 import os
 import config
-from run import run_Semi # , run_FedAvg, run_Local, run_MAFSSL
+from run import run_Semi, run_FedAvg, run_Local
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -32,8 +32,6 @@ for t in range(args.run_times):
         run_Local()
     elif conf.algorithm == 'Semi':
         run_Semi()
-    elif conf.algorithm == 'MAFSSL':
-        run_MAFSSL()
 
     os.rename('./' + conf.algorithm + '/' + 'log', './' + conf.algorithm + '/' + 'log_' + str(t + 1))
     os.rename('./' + conf.algorithm + '/' + 'model', './' + conf.algorithm + '/' + 'model_' + str(t + 1))

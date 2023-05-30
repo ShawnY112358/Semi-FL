@@ -4,13 +4,11 @@ import data_loader
 from data_loader import save_data, iid, load_from_file
 import os
 import config
-# from FedAvg.server import avg_Server
-# from FedAvg.client import avg_Client
-# from Local.client import local_Client
+from FedAvg.server import avg_Server
+from FedAvg.client import avg_Client
+from Local.client import local_Client
 from Semi.client import semi_Client
 from Semi.server import semi_Server
-# from MAFSSL.server import mafssl_Server
-# from MAFSSL.client import mafssl_Client
 import random
 import shutil
 import torch
@@ -113,39 +111,4 @@ def run_Semi():
             client.train(g_epoch)
         server.aggregate()
         server.test()
-    torch.save(server.extractor, './Semi/model/extractor.pt')
-    torch.save(server.classifier, './Semi/model/classifier.pt')
-
-def init_MAFSSL():
-
-    if os.path.exists('./MAFSSL/log'):
-        shutil.rmtree("./MAFSSL/log")
-    os.mkdir('./MAFSSL/log')
-    if os.path.exists('./MAFSSL/model'):
-        shutil.rmtree("./MAFSSL/model")
-    os.mkdir('./MAFSSL/model')
-
-    clients = []
-    server = mafssl_Server()
-
-    for i in range(conf.num_clients):
-        train_data, test_data = load_from_file(i)
-        client = mafssl_Client(i, train_data, test_data, server)
-        server.clients.append(client)
-        clients.append(client)
-
-    return clients, server
-
-def run_MAFSSL(finetune=False):
-    clients, server = init_MAFSSL()
-    server.aggregate()
-    for g_epoch in range(conf.nums_g_epoch):
-        for client in clients:
-            client.down_model()
-        group = random.sample(clients, int(conf.num_clients * conf.select_rate))
-        for client in group:
-            print("global_epoch: %d" % g_epoch)
-            client.train(g_epoch=g_epoch)
-        server.aggregate()
-    torch.save(server.extractor, './MAFSSL/model/extractor.pt')
-    torch.save(server.classifier, './MAFSSL/model/classifier.pt')
+    torch.save(server.model, './Semi/model/model.pt')
