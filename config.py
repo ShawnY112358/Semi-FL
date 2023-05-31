@@ -17,6 +17,7 @@ class Config():
         self.num_proxy_data = 1000 * self.num_classes
         self.l_epoch = 10  # local update
         self.l_iteration_per_epoch = 10
+        self.num_l_iteration = 1
         self.prox_cfft = 0.01 # punish term coefficient of fedprox
         self.finetune = False
         self.algorithm = 'MAFSSL'

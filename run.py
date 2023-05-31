@@ -73,9 +73,9 @@ def run_FedAvg(finetune=False):
             print("global_epoch: %d" % g_epoch)
             client.train()
         server.aggregate()
-        server.test()
-    torch.save(server.extractor, './FedAvg/model/extractor.pt')
-    torch.save(server.classifier, './FedAvg/model/classifier.pt')
+        if (g_epoch + 1) % 10 == 0:
+            server.test()
+    torch.save(server.model, './FedAvg/model/model.pt')
 
 def init_Semi():
 

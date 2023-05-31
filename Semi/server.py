@@ -79,7 +79,10 @@ class semi_Server():
         self.proxy_data = [(self.proxy_data[i][0], self.proxy_labels[i]) for i in range(len(self.proxy_data))]
         self.proxy_data.sort(key=lambda i: i[1])
 
+
         self.data_dict = dict()
+        for i in range(conf.num_classes):
+            self.data_dict[i] = []
         start = 0
         for i in range(1, len(self.proxy_data)):
             if self.proxy_data[i][1] != self.proxy_data[i - 1][1]:
@@ -89,15 +92,14 @@ class semi_Server():
 
     def test(self):
         # FedAvg
-        self.extractor.eval()
-        self.classifier.eval()
+        self.model.eval()
         correct = 0
         total = 0
         with torch.no_grad():
             for data in self.test_loader:
                 inputs, labels = data
                 inputs, labels = inputs.to(conf.device), labels.to(conf.device)
-                output = self.classifier(self.extractor(inputs))
+                output = self.model(inputs)
                 _, predicted = torch.max(output.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()

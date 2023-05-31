@@ -14,13 +14,10 @@ import data_loader
 class avg_Client():
     def __init__(self, index, data, test_data, server):
         self.index = index
-
-
         data = data_loader.load_dataset(name='cifar', is_train=True)
         random.shuffle(data)
 
-        self.labeled_data = data[: int(conf.labeled_rate * len(data))]
-        self.unlabeled_data = data[int(conf.labeled_rate * len(data)): ]
+        self.labeled_data = data
         self.test_data = test_data
 
         self.num_data = len(self.labeled_data)
@@ -30,8 +27,12 @@ class avg_Client():
         self.num_l_epochs = conf.l_epoch
         self.batch_size = conf.batchsize
         self.lr = conf.learning_rate
+        self.trainloader = torch.utils.data.DataLoader(self.labeled_data, batch_size=self.batch_size, shuffle=True)
+        self.train_iter = iter(self.trainloader)
+
         self.test_acc = []
         self.grad = []
+
 
     def train(self):
         print("FedAvg:")
@@ -40,34 +41,22 @@ class avg_Client():
         criterion = nn.CrossEntropyLoss().to(conf.device)
         # criterion = nn.CrossEntropyLoss(weight=self.server.sample_weight).to(conf.device)   # sample re-weighting
 
-        self.loss_avg = []
-        trainloader = torch.utils.data.DataLoader(self.labeled_data, batch_size=self.batch_size, shuffle=True)
-        l_iter = iter(trainloader)
-        for l_epoch in range(self.num_l_epochs):
-            avg_loss = 0
-            for i in range(conf.l_iteration_per_epoch):
-                try:
-                    l_data = l_iter.__next__()
-                except:
-                    l_iter = iter(trainloader)
-                    l_data = l_iter.__next__()
-                x, y = l_data
-                optimizer.zero_grad()
-                x, y = x.to(conf.device), y.to(conf.device)
-                # output = self.classifier(self.extractor(x))
-                output = self.model(x)
-                loss = criterion(output, y)
-                loss.backward()
-                optimizer.step()
+        for l_iter in range(conf.num_l_iteration):
+            try:
+                l_data = self.train_iter.__next__()
+            except:
+                self.train_iter = iter(self.trainloader)
+                l_data = self.train_iter.__next__()
+            x, y = l_data
+            optimizer.zero_grad()
+            x, y = x.to(conf.device), y.to(conf.device)
+            output = self.model(x)
+            loss = criterion(output, y)
+            loss.backward()
+            optimizer.step()
 
-                avg_loss += loss.cpu().item()
-            if (l_epoch + 1) % 10 == 0:
-                self.test()
-            avg_loss /= conf.l_iteration_per_epoch
-            print("client: %d\t epoch: (%d/%d)\t loss: %f"
-                  % (self.index, l_epoch, self.num_l_epochs, avg_loss))
-            self.loss_avg.append(avg_loss)
-
+            print("client: %d\t iteration: (%d/%d)\t loss: %f"
+                  % (self.index, l_iter, conf.num_l_iteration, loss.cpu().item()))
 
     def down_model(self):
 
