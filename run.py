@@ -68,7 +68,7 @@ def run_FedAvg(finetune=False):
     for g_epoch in range(conf.nums_g_epoch):
         # for client in clients:
         #     client.down_model()
-        group = random.sample(clients, int(conf.num_clients * conf.select_rate))
+        group = random.sample(clients, max(int(conf.num_clients * conf.select_rate), 1))
         for client in group:
             print("global_epoch: %d" % g_epoch)
             client.train()
